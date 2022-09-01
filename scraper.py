@@ -6,8 +6,9 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium import webdriver
 from bs4 import BeautifulSoup
+import threading
 import time
-import os
+import json
 
 def main():
     class Scraper:
@@ -27,8 +28,7 @@ def main():
 
             options.add_experimental_option("excludeSwitches", ["enable-logging"])
             self.browser = webdriver.Chrome(service=service, options=options, service_log_path='NUL')
-            self.scraper_running = True
-
+            self.running = True
 
         def close_cookies_popup(self):
             try:
@@ -36,7 +36,7 @@ def main():
                 for button in buttons:
                     if "Приемане" in button.text:
                         button.click()
-            except Exception: print("No cookies to accept")
+            except Exception: print("Cookies Accepted")
 
         @staticmethod
         def build_search_urls() -> list:
@@ -58,6 +58,10 @@ def main():
             with open(path, 'w', encoding='utf-8') as f:
                 for line in lines:
                     f.write(line + "\n")
+
+        def stop_scraper_thread(self):
+            input()
+            self.running = False
 
         def acquire_places_urls(self, url: str) -> set:
             #Get the business URLs
@@ -98,6 +102,14 @@ def main():
                     try:
                         self.browser.find_element(By.XPATH, ('/html/body/div[3]/div[9]/div[9]/div/div/'
                         'div[1]/div[2]/div/div[1]/div/div/div[2]/div[1]')).send_keys(Keys.PAGE_DOWN)
+                        if self.running is False:
+                            print('Scraper stopped')   
+                            self.browser.close()
+                            self.browser.quit()
+                            Scraper.remove_duplicate_lines('places_urls.txt')
+                            Scraper.remove_duplicate_lines('reviews.txt')
+                            print('Removed duplicates from files')
+                            return 1
                     except Exception:
                         #if there's an error with the page we just continue to the next page
                         break
@@ -119,8 +131,7 @@ def main():
             print(f'Scraping reviews for {len(urls)} businesses')
             # Create a loop for obtaining data from URLs
             for index, url in enumerate(urls):
-                if not self.scraper_running:
-                    return -1
+                
                 # Open the Google Map URL
                 self.browser.get(url)
 
@@ -165,6 +176,14 @@ def main():
                             wait = WebDriverWait(self.browser, 10)
                             wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, '#QA0Szd > div > div > div.w6VYqd > div.bJzME.tTVLSc > div > div.e07Vkf.kA9KIf > div > div > div.m6QErb.DxyBCb.kA9KIf.dS8AEf')))
                             self.browser.find_element(By.CSS_SELECTOR, '#QA0Szd > div > div > div.w6VYqd > div.bJzME.tTVLSc > div > div.e07Vkf.kA9KIf > div > div > div.m6QErb.DxyBCb.kA9KIf.dS8AEf').send_keys(Keys.PAGE_DOWN)
+                            if self.running is False:
+                                print('Scraper stopped')   
+                                self.browser.close()
+                                self.browser.quit()
+                                Scraper.remove_duplicate_lines('places_urls.txt')
+                                Scraper.remove_duplicate_lines('reviews.txt')
+                                print('Removed duplicates from files')
+                                return 1
                         except Exception:
                             print("Can't scroll. Reached end of reviews. ")
                             end_reached = True
@@ -175,26 +194,30 @@ def main():
                     new_reviews = self.browser.find_elements(By.CLASS_NAME, "wiI7pd")
 
                     if len(new_reviews) > 2:
-                        if len((new_reviews[-1]).text) >= 5:
-                            for review in new_reviews:
-                                if 'Преведено' not in review.text:
-                                        reviews.add(review.text)
-                        else:
-                            print('Empty reviews found. Skipping')
-                            end_reached = True
-                            break
-                    else:
-                        print('Less than 3 reviews found. Skipping') 
-                        end_reached = True
-                        break                   
-
+                        for review in new_reviews:
+                            if 'Преведено' not in review.text:
+                                reviews.add(review.text)
+                    if new_reviews:
+                        if len((new_reviews[-1]).text) < 5:
+                            break                            
+            
                 # Save reviews
-                with open('reviews.txt', 'a', encoding='utf-8') as f:
-                    if len(reviews) > 2:
-                        print(f'Saving {len(reviews)} reviews')
-                        for review in reviews:
-                                f.write(f'{str(review)}\n')  
-                                #f.write(f'{str(review)} - {BUSINESS_NAME}\n')               
+                # with open('reviews.txt', 'a', encoding='utf-8') as f:
+                #     if len(reviews) > 2:
+                #         print(f'Saving {len(reviews)} reviews')
+                #         for review in reviews:
+                #             f.write(f'{str(review)}\n')  
+                #             #f.write(f'{str(review)} - {BUSINESS_NAME}\n')      
+                with open('data.json', 'r', encoding='utf-8') as f:
+                    json_obj = json.load(f)
+
+                if len(reviews) > 2:
+                    print(f'Saving {len(reviews)} reviews')
+                    json_obj['data']['pairs'][url] = list(reviews)
+
+                    with open('data.json', 'w', encoding='utf-8') as f:
+                        json.dump(json_obj, f, indent=2, ensure_ascii=True)
+                         
                 
                 #Delete the scraped url from file
                 with open('places_urls.txt', 'r') as f:
@@ -204,29 +227,20 @@ def main():
                         if line != url:
                             f.write(f'{line}\n')
                 print(f'{index} / {len(urls)}')            
-          
-    try:
-        scraper = Scraper(headless=True)
-        # search_urls = Scraper.build_search_urls()
-        # SEARCH_URLS_COUNT = len(search_urls)
-        # for index, search_url in enumerate(search_urls):
-        #     print(f'Acquiring places urls for: {search_url[35:]} | {index} / {SEARCH_URLS_COUNT}')
-        #     scraper.acquire_places_urls(url=search_url)
-        with open('places_urls.txt', 'r', encoding='utf-8') as f:
-            places_urls = set([line.strip() for line in f.readlines()])
-        scraper.scrape_reviews(places_urls)
 
-    except KeyboardInterrupt:
-        print('Scraper stopped')
-        scraper.scraper_running = False
-        #Remove duplicate lines
-        Scraper.remove_duplicate_lines('places_urls.txt')
-        Scraper.remove_duplicate_lines('reviews.txt')
-        print('Removed duplicates from files') 
-        scraper.browser.quit()
-        os._exit(os.X_OK)
-            
-    print('Done!')
+    headless = input('Run headless? (Y/N) ')
+    headless = True if 'y' in headless.lower() else False    
+    scraper = Scraper(headless=headless)
+    threading.Thread(target=scraper.stop_scraper_thread).start()
+    # search_urls = Scraper.build_search_urls()
+    # SEARCH_URLS_COUNT = len(search_urls)
+    # for index, search_url in enumerate(search_urls):
+    #     print(f'Acquiring places urls for: {search_url[35:]} | {index} / {SEARCH_URLS_COUNT}')
+    #     scraper.acquire_places_urls(url=search_url)
+    with open('places_urls.txt', 'r', encoding='utf-8') as f:
+        places_urls = set([line.strip() for line in f.readlines()])  
+    scraper.scrape_reviews(places_urls)  
+
 
 if __name__ == '__main__':
     main()
