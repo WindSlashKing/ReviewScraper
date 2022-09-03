@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup
 import threading
 import time
 import json
+import os
 
 def main():
     class Scraper:
@@ -29,6 +30,7 @@ def main():
             options.add_experimental_option("excludeSwitches", ["enable-logging"])
             self.browser = webdriver.Chrome(service=service, options=options, service_log_path='NUL')
             self.running = True
+            self.inputs_handled = False
 
         def close_cookies_popup(self):
             try:
@@ -60,6 +62,9 @@ def main():
                     f.write(line + "\n")
 
         def stop_scraper_thread(self):
+            while not self.inputs_handled:
+                time.sleep(1)
+            print('Press enter to exit scraper safely')    
             input()
             self.running = False
 
@@ -137,14 +142,6 @@ def main():
 
                 #Close cookies popup
                 self.close_cookies_popup()   
-                    
-                #Get business name
-                #WARNING: Untested code
-                '''
-                wait = WebDriverWait(self.browser, 10)
-                wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, '#QA0Szd > div > div > div.w6VYqd > div.bJzME.tTVLSc > div > div.e07Vkf.kA9KIf > div > div > div.TIHn2 > div.tAiQdd > div.lMbq3e > div:nth-child(1) > h1')))
-                BUSINESS_NAME = self.browser.find_element(By.CSS_SELECTOR, '#QA0Szd > div > div > div.w6VYqd > div.bJzME.tTVLSc > div > div.e07Vkf.kA9KIf > div > div > div.TIHn2 > div.tAiQdd > div.lMbq3e > div:nth-child(1) > h1').text
-                '''
                 
                 # Click get reviews button
                 try:
@@ -191,11 +188,11 @@ def main():
                         time.sleep(0.2)
                     
                     # Find reviews
-                    new_reviews = self.browser.find_elements(By.CLASS_NAME, "wiI7pd")
+                    new_reviews = self.browser.find_elements(By.CLASS_NAME, "jJc9Ad")
 
                     if len(new_reviews) > 2:
                         for review in new_reviews:
-                            if 'Преведено' not in review.text:
+                            if 'Преведено' not in review.text and review.text != '':
                                 reviews.add(review.text)
                     if new_reviews:
                         if len((new_reviews[-1]).text) < 5:
@@ -215,8 +212,8 @@ def main():
                     print(f'Saving {len(reviews)} reviews')
                     json_obj['data']['pairs'][url] = list(reviews)
 
-                    with open('data.json', 'w', encoding='utf-8') as f:
-                        json.dump(json_obj, f, indent=2, ensure_ascii=True)
+                    with open(file='data.json', mode='w', encoding='utf-8') as f:
+                        json.dump(json_obj, f, indent=2)
                          
                 
                 #Delete the scraped url from file
@@ -228,19 +225,137 @@ def main():
                             f.write(f'{line}\n')
                 print(f'{index} / {len(urls)}')            
 
+        def screenshot_review(self, target_url: str, target_review: str):
+            self.browser.get(target_url)
+            self.close_cookies_popup()   
+            try:
+                wait = WebDriverWait(self.browser, 10)
+                wait.until(EC.presence_of_element_located((By.CLASS_NAME, 'DkEaL')))
+                buttons = self.browser.find_elements(By.CLASS_NAME, 'DkEaL')
+                for button in buttons:
+                    if 'отзив' in button.text:
+                        button.click()
+                        time.sleep(0.5)
+                        break
+            except Exception:
+                print('No reviews for business. Going to next business')
+                return None    
+
+            # Scroll to get more reviews
+            end_reached = False
+            loop_start_time = time.time()
+            while not end_reached:
+
+                #Check if stuck
+                if (time.time() - loop_start_time) > 150:
+                    print('Loading takes more than 150 seconds. Skipping')
+                    break
+
+                for _ in range(15):
+                    try:
+                        wait = WebDriverWait(self.browser, 10)
+                        wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, '#QA0Szd > div > div > div.w6VYqd > div.bJzME.tTVLSc > div > div.e07Vkf.kA9KIf > div > div > div.m6QErb.DxyBCb.kA9KIf.dS8AEf')))
+                        self.browser.find_element(By.CSS_SELECTOR, '#QA0Szd > div > div > div.w6VYqd > div.bJzME.tTVLSc > div > div.e07Vkf.kA9KIf > div > div > div.m6QErb.DxyBCb.kA9KIf.dS8AEf').send_keys(Keys.PAGE_DOWN)
+                        if self.running is False:
+                            print('Scraper stopped')   
+                            self.browser.close()
+                            self.browser.quit()
+                            Scraper.remove_duplicate_lines('places_urls.txt')
+                            Scraper.remove_duplicate_lines('reviews.txt')
+                            print('Removed duplicates from files')
+                            return 1
+                    except Exception:
+                        print("Can't scroll. Reached end of reviews. ")
+                        end_reached = True
+                        break
+                    time.sleep(0.2)
+                
+                # Find reviews
+                new_reviews = self.browser.find_elements(By.CLASS_NAME, "jJc9Ad")
+                
+                if len(new_reviews) > 2:
+                    for review in new_reviews:
+                        if target_review in review.text:
+                            print('Saving screenshot')
+                            review.screenshot(os.path.join('screenshots', f'{time.time()}.png'))
+                            return 0
+                    if len((new_reviews[-1]).text) < 5:
+                        return 1                            
+
+        def search_phrases(self, phrases: list = [], screenshot: bool = False):
+            BG_WORDS = [
+                'педал', 'путка', 'наебан', 'насран',
+                'грозен', 'малоумен', 'глупав', 'да еба',
+                'шибан', 'копеле', 'боклук', 'чукундур',
+                'майна'
+                ]
+            ENG_WORDS = [
+                'maika', 'pedal', 'kuche', 'putka',
+                'naeban', 'nasran', 'grozen', 'maloumen',
+                'glupav', 'da eba', 'shiban', 'kopele',
+                'bokluk', 'chukundur', 'maina'
+                ] 
+
+            with open('filtered reviews.txt', 'r', encoding='utf-8') as f:
+                saved_reviews = f.read()
+
+            with open('data.json', 'r', encoding='utf-8') as f:
+                json_obj = json.load(f)
+            url_dict = json_obj['data']['pairs']
+            print('Loaded reviews')
+            print('Searching phrases')
+            with open('filtered reviews.txt', 'a', encoding='utf-8') as f:
+                for url, reviews in url_dict.items():
+                    for review in reviews:
+                        if phrases[0] != '':
+                            #Example: hello, looks like, this example
+                            for phrase in phrases:
+                                if phrase in review.lower() and review not in saved_reviews:
+                                    f.write(f'{review} - {url}\n')
+                                    if screenshot:
+                                        self.screenshot_review(target_url=url, target_review=review)
+                                    break
+                        else:
+                            for phrase in ENG_WORDS:
+                                if phrase in review.lower() and review not in saved_reviews:
+                                    #print(f'########{phrase}#########', review)
+                                    f.write(f'{review} - {url}\n')
+                                    if screenshot:
+                                        self.screenshot_review(target_url=url, target_review=review)
+                                    break  
+                            for phrase in BG_WORDS:
+                                if phrase in review.lower() and review not in saved_reviews:
+                                    #print(f'########{phrase}#########', review)
+                                    f.write(f'{review} - {url}\n')
+                                    if screenshot:
+                                        self.screenshot_review(target_url=url, target_review=review)
+                                    break
+                            
+    scrape_reviews = input("(1) Scrape reviews from places_urls.txt\n(2) Acquire places URLs\n(3) Search phrases in reviews.txt\nChoice: ")
+    
     headless = input('Run headless? (Y/N) ')
     headless = True if 'y' in headless.lower() else False    
     scraper = Scraper(headless=headless)
     threading.Thread(target=scraper.stop_scraper_thread).start()
-    # search_urls = Scraper.build_search_urls()
-    # SEARCH_URLS_COUNT = len(search_urls)
-    # for index, search_url in enumerate(search_urls):
-    #     print(f'Acquiring places urls for: {search_url[35:]} | {index} / {SEARCH_URLS_COUNT}')
-    #     scraper.acquire_places_urls(url=search_url)
-    with open('places_urls.txt', 'r', encoding='utf-8') as f:
-        places_urls = set([line.strip() for line in f.readlines()])  
-    scraper.scrape_reviews(places_urls)  
 
+    if scrape_reviews == '1':
+        scraper.inputs_handled = True
+        with open('places_urls.txt', 'r', encoding='utf-8') as f:
+            places_urls = set([line.strip() for line in f.readlines()])  
+        scraper.scrape_reviews(places_urls)  
+    elif scrape_reviews == '2':
+        search_urls = Scraper.build_search_urls()
+        SEARCH_URLS_COUNT = len(search_urls)
+        for index, search_url in enumerate(search_urls):
+            print(f'Acquiring places urls for: {search_url[35:]} | {index} / {SEARCH_URLS_COUNT}')
+            scraper.acquire_places_urls(url=search_url)
+    else:
+        phrases =  input('Enter phrases to search separated by ", ": ')
+        phrases = phrases.split(', ')
+        screenshot = input("Screenshot found reviews? (Y/N): ")
+        scraper.inputs_handled = True
+        screenshot = True if 'y' in screenshot.lower() else False    
+        scraper.search_phrases(phrases=phrases, screenshot=screenshot)       
 
 if __name__ == '__main__':
     main()
