@@ -36,10 +36,12 @@ def main():
             try:
                 buttons = self.browser.find_elements(By.CLASS_NAME, 'VfPpkd-dgl2Hf-ppHlrf-sM5MNb')
                 for button in buttons:
+                    #LANGUAGE DEPENDANT CODE
                     if "Приемане" in button.text:
                         button.click()
             except Exception: print("Cookies Accepted")
 
+        #LANGUAGE DEPENDANT CODE
         @staticmethod
         def build_search_urls() -> list:
             print('Building search urls')
@@ -47,7 +49,7 @@ def main():
                 towns = [line.strip() for line in f.readlines()]
                 towns = [town.replace(' ', '+') for town in towns]
             with open('scraped_towns.txt', 'r', encoding='utf-8') as f:
-                scraped_towns =  f.read()
+                scraped_towns =  f.read() 
             urls_list = [f'https://www.google.com/maps/search/{town}+Ресторанти' for town in towns if town not in scraped_towns]   
             print(f'Places to be acquired: {len(urls_list)}')
             return urls_list
@@ -85,6 +87,7 @@ def main():
 
             stuck_counter = 0
             loop_start_time = time.time()
+            #LANGUAGE DEPENDANT CODE
             while 'Стигнахте до края на списъка.' not in self.browser.page_source:
 
                 #Check if stuck
@@ -149,6 +152,7 @@ def main():
                     wait.until(EC.presence_of_element_located((By.CLASS_NAME, 'DkEaL')))
                     buttons = self.browser.find_elements(By.CLASS_NAME, 'DkEaL')
                     for button in buttons:
+                        #LANGUAGE DEPENDANT CODE
                         if 'отзив' in button.text:
                             button.click()
                             time.sleep(0.5)
@@ -192,6 +196,7 @@ def main():
 
                     if len(new_reviews) > 2:
                         for review in new_reviews:
+                            #LANGUAGE DEPENDANT CODE
                             if 'Преведено' not in review.text and review.text != '':
                                 reviews.add(review.text)
                     if new_reviews:
@@ -233,6 +238,7 @@ def main():
                 wait.until(EC.presence_of_element_located((By.CLASS_NAME, 'DkEaL')))
                 buttons = self.browser.find_elements(By.CLASS_NAME, 'DkEaL')
                 for button in buttons:
+                    #LANGUAGE DEPENDANT CODE
                     if 'отзив' in button.text:
                         button.click()
                         time.sleep(0.5)
@@ -294,7 +300,22 @@ def main():
                 'naeban', 'nasran', 'grozen', 'maloumen',
                 'glupav', 'da eba', 'shiban', 'kopele',
                 'bokluk', 'chukundur', 'maina'
-                ] 
+                ]   
+            PETUR_WORDS = [
+                'kurva', 'putka', 'kon', 'dunka',
+                'kurvar', 'mindja', 'minja', 'guz',
+                'zadnik', 'kur', 'hui', 'pishka',
+                'izrod', 'izverg', 'ogre', 'mastiq',
+                'kobila', 'kobilkina', 'kastraciq', 'ebaniee',
+                'seks', 'polovo slivane', 'fushkiq', 'govno',
+                'izprejnenie', 'kombainer', 'kradec', 'magistralka',
+                'prostitutka', 'adam i eva', 'tumor', 'chreren humor',
+                'duduk', 'kaval', 'karucar', 'parazit',
+                'invalid'
+                ]
+
+            NAJDEN_WORDS = ['алманах', 'Амбреаж', 'арабеска', 'бабушкеро', 'бай Грую', 'Бай Х', 'Балуш', 'Бацикурковец', 'баш говню', 'бешлик', 'блондинка под прикритие', 'бляд', 'божлек', 'боклик', 'Боклук-таба', 'ботор', 'българска му работа', 'бълхар', 'в устенцата', 'вампиряга', 'Вепър', 'вертикална локва', 'византиец', 'въй, въй, въй', 'върви и кендза', 'гагауз', 'гагаузин', 'гаджал', 'главок', 'глопак', 'глупендер', 'глуха кучка', 'говедовъд', 'говнарка', 'говню', 'говнювизатор', 'говнюсерко', 'голям си прос', 'голяма бяла птица', 'готопотам', 'гурел', 'гяурин', 'ДБ или ДГБ', 'ДВИБ', 'ДВИБУГЗ', 'дебелейкай се', 'дембелин', 'джапанка', 'джармун', 'джидия', 'джурналист', 'дрисла', 'дрисливщина', 'дришняр', 'дрондзул', 'другия Георги', 'дръндьо', 'дръпнат', 'ДТИБ', 'дтибвгз', 'дулица', 'думкане', 'дундурма', 'дупедавец', 'духач', 'Душкюру', 'дървеняк', 'дърт говню', 'дърта каракуда', 'дърта флигорна', 'дъртулка', 'ебан гургуль', 'жидово чедо', 'жълтур', 'жълтурко', 'заебал', 'Залютянка', 'заспал мисир', 'заспала путка', 'засранец', 'засрок', 'златен камшик', 'зубър', 'изпърдян шибаняк', 'бит педерас', 'Каишев', 'камилар', 'катър без история', 'кацап', 'кекерица', 'кендел', 'кендзано', 'кенлер', 'кикипръч', 'килър', 'клекопикаещо', 'клепар', 'клесна', 'клефук', 'Ковра', 'кондил', 'конска муха', 'копеле', 'копеле фалшиво', 'коскуджамити парцал', 'кофпомпа', 'Кранта', 'кръндак', 'курве', 'курдак', 'куропоглъщач', 'куроспиралооблизвачо-лизач', 'курчо', 'кучи син', 'Кушкунтия', 'кюмюр', 'лайнер', 'лайно', 'лайномел', 'Лайношак', 'лайнце', 'лайньо', 'Лайньо', 'ласпер', 'леФскар', 'лешпер', 'лигня', 'локална', 'магарица', 'маджури', 'маиз', 'Майдаебае', 'Майк Тайсън', 'Маймуно мръсна', 'Малака', 'мамицата ти', 'мангал', 'мангалоид', 'мангасар', 'мангуста', 'Маризиш', 'маскара', 'мека Мария', 'меки цици', 'мекотело', 'мингеч', 'мингянин', 'миризлив говню', 'мирша', 'михлюзаджийница', 'мундю', 'муньо', 'мутра', 'мутреса', 'муха без глава', 'мушмул', 'Мъдеядка', 'мъдьо', 'мърда', 'мършавел', 'надупен', 'напикано мушкато', 'напълни калеврите', 'науйник', 'Нерез', 'нимбус', 'нищожество', 'обиждалото', 'овца', 'Овчо Сънлев', 'опулен шизофреник', 'орляк', 'паздерка', 'пайтал', 'папун', 'парантия', 'парашутист пробит', 'парясница', 'патка', 'пацавура', 'пацулан', 'педал изсипан', 'педерак', 'педерас', 'педераст', 'педерасуля', 'педерахуйник', 'Педеруга', 'педерунгел', 'педесар', 'Пеерун, Пиирун', 'пезевенк', 'пеизан', 'пендел', 'Пендехо', 'пеницилин', 'пенюга', 'перекенде', 'пигмей', 'пидераз', 'пикае клекнал', 'пикаеща крава', 'пикла', 'пикльо', 'пиндос', 'пичка ти материна', 'пиш ми яжката', 'пишкарак', 'плазмодий', 'Плюнко', 'подгъзуване', 'покемон', 'помия', 'посран', 'прашляк', 'презерватив', 'прокиш', 'пролетна диария', 'прост като гъз', 'проста маса', 'просто момче', 'пръдлив гъз', 'пръцсекар', 'психически парцал', 'пукел', 'пульо', 'пульо пулев', 'пустиняк', 'путка', 'путкообразен', 'путьо', 'разциврена крава', 'ранен бръмбар', 'рапунгел', 'резняк', 'ритнитопковец', 'ръбел', 'рътница', 'ръфлек', 'рязан кореец', 'рязан турчин', 'рязана пушка', 'свински очички', 'свиньо блатска', 'свиня блатска', 'селянин', 'Семкар', 'семкари', 'силиконка', 'скенджа', 'скумрия', 'Скълцаняк', 'слаба ракия', 'слабист', 'Сливия', 'смачкана гайда', 'смотла', 'смукач', 'смърф', 'содомит', 'сопол', 'сополкьо', 'Сояджия', 'спрънджа', 'Спукан кондом', 'стара пъстърма', 'стара чанта', 'суек', 'сука блят', 'сумляк', 'сумостряк', 'тропа ти дъската', 'тулуп', 'турчуля', 'тъпа крава', 'тъпо говедо', 'Тъпото', 'улеро', 'умри от песак', 'упражнение за луди', 'урод небесен', 'уртомуртодук', 'усерко', 'усра', 'УСРО', 'усрьо', 'устра', 'утайка', 'финикийка', 'франсе', 'френски ключ', 'фъфел', 'хлебя', 'Хобити', 'ходеща путка', 'хой си', 'хуй сплескан', 'хуйо', 'хюмне', 'цалапишки шмиргел', 'Цар Гомню', 'цопуша', 'ЦСКА', 'Църульж', 'чавел', 'чапла', 'червек', 'Червена Шапчица', 'чичак', 'чобанин', 'чубака', 'чукундур', 'чупакабра', 'шаноманяк', 'Шапуй', 'швестер', 'шешичест', 'шизо', 'шиндихуй', 'шиптер', 'шиптър', 'шкейн', 'шмульо', 'шушляк', 'яж гОвна', 'Яж лайна', 'яж ми гъзъ', 'яж салама', 'яйца на очи', 'крокозъбел', 'янки', 'фърфалак', 'кукуминдер', 'бръмбъзък', 'кукундрел', 'паращисана', 'маламурняк', 'мушморок', 'мискинин', 'плашипутарник', 'путкарага', 'смрадоляк', 'плякор', 'келеметор', 'прошляк', 'скраклюзен', 'скучубра', 'глангор']
+            psuvni = list(dict.fromkeys(BG_WORDS + ENG_WORDS + PETUR_WORDS + NAJDEN_WORDS))
 
             with open('filtered reviews.txt', 'r', encoding='utf-8') as f:
                 saved_reviews = f.read()
@@ -308,28 +329,24 @@ def main():
                 for url, reviews in url_dict.items():
                     for review in reviews:
                         if phrases[0] != '':
+                            #print(f'Searching for phrases {phrases}')
                             #Example: hello, looks like, this example
                             for phrase in phrases:
-                                if phrase in review.lower() and review not in saved_reviews:
+                                if phrase.lower() in review.lower() and len(phrase) > 5 and review not in saved_reviews:
+                                    print(f'Phrase found: {phrase}')
                                     f.write(f'{review} - {url}\n')
                                     if screenshot:
                                         self.screenshot_review(target_url=url, target_review=review)
                                     break
                         else:
-                            for phrase in ENG_WORDS:
+                            for phrase in psuvni:
                                 if phrase in review.lower() and review not in saved_reviews:
-                                    #print(f'########{phrase}#########', review)
-                                    f.write(f'{review} - {url}\n')
-                                    if screenshot:
-                                        self.screenshot_review(target_url=url, target_review=review)
-                                    break  
-                            for phrase in BG_WORDS:
-                                if phrase in review.lower() and review not in saved_reviews:
-                                    #print(f'########{phrase}#########', review)
+                                    print(f'Phrase found: {phrase}')
                                     f.write(f'{review} - {url}\n')
                                     if screenshot:
                                         self.screenshot_review(target_url=url, target_review=review)
                                     break
+            print('Done searching.')                
                             
     scrape_reviews = input("(1) Scrape reviews from places_urls.txt\n(2) Acquire places URLs\n(3) Search phrases in reviews.txt\nChoice: ")
     
@@ -359,4 +376,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+    print('Done with everything!')
     
